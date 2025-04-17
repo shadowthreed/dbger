@@ -19,3 +19,4 @@ int main(void)
     // ...
 }
 ```
+5. 如果需要在`linux`环境下使用，可参考[wsl_stm32_demo](https://github.com/ShadowThree/wsl_stm32_demo);
