@@ -1,23 +1,48 @@
 /**
  * @file	dbger.h
- * @brief	log moduleThis file provides code for outputing the LOG by uart or RTT.
- *          The priority levels as below:
-				1.[AST]:Assert      (Highest)
+ * @brief	Log module. This file provides code for UART or RTT to output the LOG.
+ *          The priority levels are as follows:
+				1. [AST]: Assert      (Highest)
                 2.[ERR]:Error
                 3.[WAR]:Warnning
                 4.[INF]:Info
                 5.[DBG]:Debug
-                6.[VBS]:Verbose     (Lowest)
+                6. [VBS]: Verbose     (Lowest)
  *
- * @note for Using this mode:
- *		1. MUST enable the STDOUT in MDK-ARM -> RTE -> Compiler -> I/O -> STDOUT(user);
- *		2. if LOG_BY_RTT, you can get the LOG in J-Link RTT Viewer;
- *		3. if LOG_BY_UART, you can get the LOG in any UART assistant, like Putty;
- *		4. you can output the LOG by LOG_xxx() micro for different LOG level, or just by printf();
+ * @note HOW TO USE RTT LOG:
+ *        1. MUST enable the STDOUT in MDK-ARM -> RTE -> Compiler -> I/O -> STDOUT(user);
+ *		  2. If LOG_BY_RTT, you can get the LOG in J-Link RTT Viewer;
+ *		  3. If LOG_BY_UART, you can get the LOG in any UART assistant, like PuTTY;
+ *		  4. you can output the LOG by LOG_xxx() micro for different LOG level, or just by printf();
+ *
+ * @note HOW TO USE RTT JSCOPE:
+ *        1. global define
+              #pragma pack(push, 1)   // byte alignment start
+              typedef struct {
+                uint16_t u2;
+                uint8_t i1;
+              } JSCOPE_TYPE_t;
+              #pragma pack(pop)       // byte alignment end
+              #define JSCOPE_BUF_LEN  512
+              uint8_t JSCOPE_BUF[JSCOPE_BUF_LEN] __attribute__((aligned(4)));
+ *        2. init
+              LOG_INIT();
+              // "u4"=uint32_t, "u1"=uint8_t, "i2"=int16_t, "t4"=timestamp in us.    // option: t4 u1/2/4 i/1/2/4
+              SEGGER_RTT_ConfigUpBuffer(1, "JScope_u2i1", JSCOPE_BUF, JSCOPE_BUF_LEN, SEGGER_RTT_MODE_NO_BLOCK_SKIP);    // JSCOPE_BUF must define by global buf
+ *        3. send data
+              JSCOPE_TYPE_t jscopeData;
+              while(1) {
+                  jscopeData.u2 = HAL_GetTick() & 0xFFFF;
+                  jscopeData.i1++;
+                  SEGGER_RTT_Write(1, &jscopeData, sizeof(jscopeData));
+              }
+ *        4. Seems CAN'T add "t4"? I always failed.
+ *            
  *
  * @author	shadowthreed@gmail.com
  * @date	20240714
  *			20240809	update: same API for UART and RTT
+ *          20250616    updata: add JSCOPE
  */
 
 #ifndef __DBGER_H__
@@ -76,7 +101,7 @@ extern "C"
 	#include "SEGGER_RTT.h"
 	#include <stdint.h>
 	#define LOG_INIT()		SEGGER_RTT_Init()
-	#define LOG_DAT(...)	do { if(LOG_LEVEL >= 1) { SEGGER_RTT_SetTerminal(2); printf(##__VA_ARGS__); SEGGER_RTT_SetTerminal(1); }} while(0)		// for print protocol data
+	#define LOG_DAT(...)	do { if(LOG_LEVEL >= 1) { SEGGER_RTT_SetTerminal(2); printf(__VA_ARGS__); SEGGER_RTT_SetTerminal(1); }} while(0)		// for print protocol data
 	#define LOG_AST(...)    do { if(LOG_LEVEL >= 1) { SEGGER_RTT_SetTerminal(0); printf(COLOR_RED 		"[AST:%s:%d] ", __FILENAME__, __LINE__); printf(__VA_ARGS__); printf("%s", COLOR_DEFAULT ""); SEGGER_RTT_SetTerminal(1); }} while(0)
 	#define LOG_ERR(...)    do { if(LOG_LEVEL >= 2) { SEGGER_RTT_SetTerminal(0); printf(COLOR_PINK 		"[ERR:%s:%d] ", __FILENAME__, __LINE__); printf(__VA_ARGS__); printf("%s", COLOR_DEFAULT ""); SEGGER_RTT_SetTerminal(1); }} while(0)
 	#define LOG_WAR(...)    do { if(LOG_LEVEL >= 3) { SEGGER_RTT_SetTerminal(0); printf(COLOR_YELLOW 	"[WAR:%s:%d] ", __FILENAME__, __LINE__); printf(__VA_ARGS__); printf("%s", COLOR_DEFAULT ""); SEGGER_RTT_SetTerminal(1); }} while(0)
