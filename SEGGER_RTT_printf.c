@@ -421,6 +421,62 @@ int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pPa
         v = va_arg(*pParamList, int);
         _PrintUnsigned(&BufferDesc, (unsigned)v, 16u, NumDigits, FieldWidth, FormatFlags);
         break;
+#if 1     // support float by djd 20221114, current do NOT support some FormatFlags param, eg: '0', '+' '#'.
+          // fixbug by djd 20251231; try it by "%f", "%7.3f", "%-7.3f".
+      case 'f':
+      {
+          double dv = va_arg(*pParamList, double);  // get number
+          int int_num, doub_num;
+          unsigned total_width = 0, base = 1, int_bit = 0, doub_bit = 0;
+        
+          dv += (dv<0 ? -1e-6 : 1e-6);  // 浮点数不能精确表示每个小数，四舍五入时会引入误差，所有这里先将这个误差问题解决
+
+          if(NumDigits == 0) {
+              NumDigits = 2;        		// 默认显示两位小数
+          }
+          
+          base = 1;
+          for(int i = 0; i < NumDigits; i++) {
+              base *= 10;
+          }
+          dv += (dv<0 ? -0.5 : 0.5) / base;             // 四舍五入
+          int_num = abs((int)dv);                       // 取整数部分
+          doub_num = abs((int)((dv - (int)dv) * base)); // 取小数部分
+          
+          // 计算整数部分位宽
+          base = 1;
+          while(int_num / base != 0) {
+              int_bit++;
+              base *= 10;
+          }
+          if(int_bit == 0) { int_bit = 1; }
+          
+          // 计算小数部分位宽
+          base = 1;
+          while(doub_num / base != 0) {
+              doub_bit++;
+              base *= 10;
+          }
+          if(doub_bit == 0) { doub_bit = 1; }
+
+          // 计算整个数据位宽
+          total_width = (dv<0 ? 1 : 0) + int_bit + 1 + NumDigits;   // 符号 + 整数部分 + 小数点 + 小数部分
+          
+          if(FieldWidth > total_width && !(FormatFlags & FORMAT_FLAG_LEFT_JUSTIFY)) {   // 当指定位宽比实际位宽大，且数据非左对齐时
+              for(int i = 0; i < FieldWidth - total_width; i++)
+                _StoreChar(&BufferDesc, ' ');   // 使用空格占位多余的空间
+          }
+          if((dv < 0) && (int_num || doub_num)) { _StoreChar(&BufferDesc, '-'); }   // 打印负数的负号
+          _PrintUnsigned(&BufferDesc, int_num, 10u, int_bit, int_bit, 0);   // 打印浮点数的整数部分
+          _StoreChar(&BufferDesc, '.');			// 打印浮点数的小数点
+          _PrintUnsigned(&BufferDesc, doub_num, 10u, NumDigits, NumDigits, FORMAT_FLAG_PAD_ZERO);   // 打印浮点数的小数部分
+          if(FieldWidth > total_width && (FormatFlags & FORMAT_FLAG_LEFT_JUSTIFY)) {    // 当指定位宽比实际位宽大，且数据左对齐时
+              for(int i = 0; i < FieldWidth - total_width; i++)
+                _StoreChar(&BufferDesc, ' ');   // 使用空格占位多余的空间
+          }
+          break;
+      }
+#endif
       case 's':
         {
           const char * s = va_arg(*pParamList, const char *);
