@@ -43,6 +43,7 @@
  * @date	20240714
  *			20240809	update: same API for UART and RTT
  *          20250616    updata: add JSCOPE
+ *          20251126    updata: support RTT CMD
  */
 
 #ifndef __DBGER_H__
@@ -59,7 +60,8 @@ extern "C"
 #define LOG_LEVEL 			5 		// the priority less than or queal to LOG_LEVEL will be output
 #define LOG_COLOR_ENABLE 	0
 #define LOG_TEST_EN			0
-#define LOG_PLATFORM		0		// 0:MDK_ARM	1:Linux	
+#define LOG_PLATFORM		0		// 0:MDK_ARM	1:Linux
+#define RTT_CMD_ENABLE      1
 
 #if LOG_ENABLE
 	#include <string.h>
@@ -109,6 +111,12 @@ extern "C"
 	#define LOG_DBG(...)    do { if(LOG_LEVEL >= 5) { printf(__VA_ARGS__); }} while(0)
 	#define LOG_VBS(...)    do { if(LOG_LEVEL >= 6) { printf(__VA_ARGS__); }} while(0)
 	#define LOG_INT(...)	do { if(LOG_LEVEL >= 1) { printf(__VA_ARGS__); }} while(0)
+    
+    #if RTT_CMD_ENABLE
+        #define RTT_CMD_BUF_LEN     32
+        extern char RTT_cmd_buf[RTT_CMD_BUF_LEN];
+        size_t get_RTT_cmd(void);      // return 1 for cmd valid; return 0 for cmd invalid;
+    #endif  // RTT_CMD_ENABLE
 #elif LOG_BY_UART
 	#include <stdio.h>
 	#define LOG_INIT()		MX_USART1_UART_Init()
